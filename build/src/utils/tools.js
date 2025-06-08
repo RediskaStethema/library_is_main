@@ -1,0 +1,97 @@
+import { Genres, Role, StatusBook } from "../model/book.js";
+import { v4 as uuidv4 } from "uuid";
+import bcrypt from "bcrypt";
+export const convetStringto_toGENRE = (genre) => {
+    const Bookgenre = Object.values(Genres).find(v => v === genre);
+    if (!Bookgenre) {
+        throw new Error(JSON.stringify({ status: 400, message: `Genre '${genre}' not found` }));
+    }
+    return Bookgenre;
+};
+export function convertto9(code10) {
+    if (!/^\d{10}$/.test(code10)) {
+        throw new Error("Код должен состоять из ровно 10 цифр");
+    }
+    const checksum = code10
+        .split("")
+        .reduce((sum, digit) => sum + Number(digit), 0);
+    const indexToRemove = checksum % 10;
+    const code9 = code10.slice(0, indexToRemove) + code10.slice(indexToRemove + 1);
+    return Number(code9);
+}
+export const converbookDTO = (dto) => {
+    return {
+        id: uuidv4(),
+        author: dto.author,
+        title: dto.title,
+        status: StatusBook.ON_STOCK,
+        genre: convetStringto_toGENRE(dto.genre),
+        picklist: [],
+    };
+};
+export const convertBookToBookDto = (book) => {
+    return {
+        title: book.title,
+        author: book.author,
+        genre: book.genre
+    };
+};
+export const getStatus = (status) => {
+    const Bookstatus = Object.values(StatusBook).find(v => v === status);
+    if (!Bookstatus)
+        throw new Error(JSON.stringify({ status: 400, message: `Genre '${status}' not found` }));
+    return Bookstatus;
+};
+export const converttoReader = (dto) => {
+    const id = convertto9(dto.passport);
+    if (dto.email && dto.birthdate && dto.password) {
+        const salt = bcrypt.genSaltSync(10);
+        const hash = bcrypt.hashSync(dto.password, salt);
+        if (dto.email.trim().toLowerCase().includes("adminoflibrary_of_mine.set")) {
+            return {
+                lastname: dto.lastname,
+                passHash: hash,
+                email: dto.email,
+                id: id,
+                birthdate: dto.birthdate,
+                date: new Date(),
+                roles: [Role.ROOT_ADMIN],
+            };
+        }
+        return {
+            lastname: dto.lastname,
+            passHash: hash,
+            email: dto.email,
+            id: id,
+            birthdate: dto.birthdate,
+            date: new Date(),
+            roles: [Role.USER],
+        };
+    }
+    return {
+        lastname: dto.lastname,
+        id: id,
+        date: new Date,
+    };
+};
+export const skipRouts = [
+    `POST/api/readers`,
+    `GET/api/books`,
+    `GET/api/readers/readers_of_book`
+];
+export const pathroles = {
+    "PATCH/api/readers/updaterole": [Role.ROOT_ADMIN],
+    "POST/api/readers": [Role.ADMIN],
+    "PATCH/api/readers/gavebook": [Role.LIBRARIAN],
+    "GET/api/readers/allreadersbooks": [Role.USER, Role.ADMIN, Role.LIBRARIAN],
+    "GET/api/readers/all_about_readers": [Role.ADMIN, Role.LIBRARIAN],
+    "GET/api/readers/bymail": [Role.ROOT_ADMIN, Role.ADMIN, Role.LIBRARIAN],
+    "GET/api/books": [Role.USER, Role.ADMIN],
+    "POST/api/books": [Role.ADMIN, Role.ROOT_ADMIN, Role.LIBRARIAN],
+    "GET/api/books/genre": [Role.USER],
+    "PUT/api/books/pick_up": [Role.USER, Role.LIBRARIAN],
+    "DELETE/api/books": [Role.ADMIN, Role.ROOT_ADMIN],
+    "PUT/api/books/return": [Role.ADMIN, Role.LIBRARIAN],
+    "GET/api/books/genre/status": [Role.USER, Role.ADMIN],
+    "GET/api/books/book_byID": [Role.USER, Role.LIBRARIAN, Role.ADMIN, Role.ROOT_ADMIN]
+};
